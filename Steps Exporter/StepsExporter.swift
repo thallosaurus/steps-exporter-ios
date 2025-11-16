@@ -61,8 +61,6 @@ class StepsExporter {
         var dailySteps: [Date: Double] = [:]
         let calendar = Calendar.current
         
-        print(samples)
-        
         for sample in samples {
             let day = calendar.startOfDay(for: sample.startDate)
             let count = sample.quantity.doubleValue(for: HKUnit.count())
