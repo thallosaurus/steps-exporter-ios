@@ -6,8 +6,39 @@
 //
 
 import PDFKit
+import Down
 
-func createPDF(with data: [(Date, Double)]) -> Data {
+let loremIpsum = """
+    # Lorem Ipsum
+    Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.  
+
+    Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero eros et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi. Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat.  
+
+    Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero eros et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi.  
+
+    Nam liber tempor cum soluta nobis eleifend option congue nihil imperdiet doming id quod mazim placerat facer possim assum. Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat.  
+
+    Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis.   
+
+    At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, At accusam aliquyam diam diam dolore dolores duo eirmod eos erat, et nonumy sed tempor et et invidunt justo labore Stet clita ea et gubergren, kasd magna no rebum. sanctus sea sed takimata ut vero voluptua. est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam
+    """
+
+typealias StepData = (Date, Double)
+
+func createFancyPDF(with: [StepData]) async throws -> Data {
+    //let markdown = "# Hello World!"
+    let markdown = loremIpsum
+    let html = try Down(markdownString: markdown).toHTML()
+    
+    let pageWidth: CGFloat = 595.2
+    let pageHeight: CGFloat = 841.8
+    let margin: CGFloat = 40
+    
+    
+    return await htmlToPDF(html)!
+}
+
+func createPDF(with data: [StepData]) -> Data {
     let pdfMetaData = [
         kCGPDFContextCreator: "Steps Exporter",
         kCGPDFContextAuthor: "Rillonautikum",
@@ -67,4 +98,54 @@ struct PDFViewCustom: UIViewRepresentable {
         func updateUIView(_ pdfView: PDFView, context: Context) {
             pdfView.document = pdfData
         }
+}
+
+// MARK: - HTML to PDF
+import WebKit
+
+func htmlToPDF(_ html: String) async -> Data? {
+    return await withCheckedContinuation { cont in
+        let webView = WKWebView(frame: .zero)
+        
+        let delegate = WebViewPDFDelegate(webView: webView) { data in
+            cont.resume(returning: data)
+        }
+        
+        // keep webview alive
+        objc_setAssociatedObject(
+            webView,
+            "delegate",
+            delegate,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        webView.loadHTMLString(html, baseURL: nil)
+    }
+}
+
+class WebViewPDFDelegate: NSObject, WKNavigationDelegate {
+    let onFinish: (Data?) -> Void
+    var webView: WKWebView?
+    
+    init(webView: WKWebView, onFinish: @escaping (Data?) -> Void) {
+        self.webView = webView
+        self.onFinish = onFinish
+        super.init()
+        webView.navigationDelegate = self
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        //let config = WKPDFConfiguration(rect: )
+        let config = WKPDFConfiguration()
+        config.rect = CGRect(x: 0, y: 0, width: 595.2, height: 841.8)
+        
+        webView.createPDF(configuration: config) { result in
+            switch result {
+            case .success(let data):
+                self.onFinish(data)
+            case .failure:
+                self.onFinish(nil)
+            }
+        }
+    }
 }

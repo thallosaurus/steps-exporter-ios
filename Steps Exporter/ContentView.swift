@@ -26,21 +26,13 @@ struct ContentView: View {
     @State var startDate = Calendar.current.date(byAdding: .day, value: -14, to: .now)!
     @State var lastExportError: StepsExporterError?
     @State var showErrorAlert = false
+    @State var patientName = ""
     
     let exporter = StepsExporter()
     
     var body: some View {
-        VStack {
-            /*Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Button("Start Export") {
-                let twoWeeksPrior = Calendar.current.date(byAdding: .day, value: -14, to: .now)!
-                startExport(startDate: twoWeeksPrior, endDate: .now)
-                
-            }*/
-            
             Form {
+                
                 DatePicker(selection: $startDate) {
                     Text("Start Date")
                 }
@@ -51,14 +43,9 @@ struct ContentView: View {
                     startExport(startDate: startDate, endDate: endDate)
                 }
             }
-        }
-        .padding()
         .sheet(item: $pdfData) { item in
             try! PDFViewCustom(showing: item.inner)
         }
-        /*.alert(isPresented: $showErrorAlert, error: lastExportError) {
-            Alert(title: Text("Important message"), message: Text("Wear sunscreen"), dismissButton: .default(Text("Got it!")))
-        }*/
     }
     
     func savePDF(data: Data) -> URL? {
@@ -80,7 +67,7 @@ struct ContentView: View {
                 let samples = try await exporter.fetchSteps(startDate: startDate, endDate: endDate)
                 let data = exporter.aggregateSteps(samples: samples)
                 
-                let pdfData = createPDF(with: data)
+                let pdfData = try await createFancyPDF(with: data)
                 //let url = savePDF(data: pdfData)
                 //self.pdfURL = url!
                 self.pdfData = PdfDataAdapter(inner: pdfData)
@@ -88,6 +75,8 @@ struct ContentView: View {
             } catch let error as StepsExporterError {
                 print(error)
                 lastExportError = error
+            } catch {
+                print(error)
             }
         }
     }

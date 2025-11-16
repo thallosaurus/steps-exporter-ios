@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		599AE0EE2ECA25320071066E /* Down in Frameworks */ = {isa = PBXBuildFile; productRef = 599AE0ED2ECA25320071066E /* Down */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		59EF04642EC8B68C00059234 /* Steps Exporter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Steps Exporter.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				599AE0EE2ECA25320071066E /* Down in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = "Steps Exporter";
 			packageProductDependencies = (
+				599AE0ED2ECA25320071066E /* Down */,
 			);
 			productName = "Steps Exporter";
 			productReference = 59EF04642EC8B68C00059234 /* Steps Exporter.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 59EF045B2EC8B68C00059234;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				599AE0EC2ECA25320071066E /* XCRemoteSwiftPackageReference "Down" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59EF04652EC8B68C00059234 /* Products */;
 			projectDirPath = "";
@@ -336,6 +345,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		599AE0EC2ECA25320071066E /* XCRemoteSwiftPackageReference "Down" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/johnxnguyen/Down";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		599AE0ED2ECA25320071066E /* Down */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 599AE0EC2ECA25320071066E /* XCRemoteSwiftPackageReference "Down" */;
+			productName = Down;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 59EF045C2EC8B68C00059234 /* Project object */;
 }
