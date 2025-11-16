@@ -49,22 +49,22 @@ func createPDF(with data: [(Date, Double)]) -> Data {
 
 import SwiftUI
 struct PDFViewCustom: UIViewRepresentable {
-    var pdfURL: URL
+    var pdfData: PDFDocument
     
-    init(showing pdfDoc: URL) {
-            self.pdfURL = pdfDoc
+    init(showing data: Data) throws {
+            self.pdfData = PDFDocument(data: data)!
         }
 
         //you could also have inits that take a URL or Data
 
         func makeUIView(context: Context) -> PDFView {
             let pdfView = PDFView()
-            pdfView.document = PDFDocument(url: pdfURL)
+            pdfView.document = pdfData
             pdfView.autoScales = true
             return pdfView
         }
 
         func updateUIView(_ pdfView: PDFView, context: Context) {
-            pdfView.document = PDFDocument(url: pdfURL)
+            pdfView.document = pdfData
         }
 }

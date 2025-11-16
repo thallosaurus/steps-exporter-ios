@@ -8,30 +8,57 @@
 import SwiftUI
 import HealthKit
 
+class PdfDataAdapter: Identifiable {
+    
+    public let inner: Data
+    init(inner: Data) {
+        self.inner = inner
+    }
+}
+
 struct ContentView: View {
-    let healthStore = HKHealthStore()
-    let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
     
     @State private var showShareSheet = false
     @State private var pdfURL: URL?
     
+    @State private var pdfData: PdfDataAdapter?
+    @State var endDate = Date.now
+    @State var startDate = Calendar.current.date(byAdding: .day, value: -14, to: .now)!
+    @State var lastExportError: StepsExporterError?
+    @State var showErrorAlert = false
+    
+    let exporter = StepsExporter()
+    
     var body: some View {
         VStack {
-            Image(systemName: "globe")
+            /*Image(systemName: "globe")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
             Button("Start Export") {
                 let twoWeeksPrior = Calendar.current.date(byAdding: .day, value: -14, to: .now)!
                 startExport(startDate: twoWeeksPrior, endDate: .now)
                 
+            }*/
+            
+            Form {
+                DatePicker(selection: $startDate) {
+                    Text("Start Date")
+                }
+                DatePicker(selection: $endDate) {
+                    Text("End Date")
+                }
+                Button("Export") {
+                    startExport(startDate: startDate, endDate: endDate)
+                }
             }
         }
         .padding()
-        .sheet(isPresented: $showShareSheet) {
-            if let url = pdfURL {
-                PDFViewCustom(showing: url)
-            }
+        .sheet(item: $pdfData) { item in
+            try! PDFViewCustom(showing: item.inner)
         }
+        /*.alert(isPresented: $showErrorAlert, error: lastExportError) {
+            Alert(title: Text("Important message"), message: Text("Wear sunscreen"), dismissButton: .default(Text("Got it!")))
+        }*/
     }
     
     func savePDF(data: Data) -> URL? {
@@ -49,74 +76,23 @@ struct ContentView: View {
     func startExport(startDate: Date, endDate: Date) {
         Task {
             do {
-                try await requestHKAuth()
-                let samples = try await fetchSteps(startDate: startDate, endDate: endDate)
-                let data = aggregateSteps(samples: samples)
+                try await exporter.requestHKAuth()
+                let samples = try await exporter.fetchSteps(startDate: startDate, endDate: endDate)
+                let data = exporter.aggregateSteps(samples: samples)
                 
                 let pdfData = createPDF(with: data)
-                let url = savePDF(data: pdfData)
-                self.pdfURL = url!
+                //let url = savePDF(data: pdfData)
+                //self.pdfURL = url!
+                self.pdfData = PdfDataAdapter(inner: pdfData)
                 showShareSheet.toggle()
+            } catch let error as StepsExporterError {
+                print(error)
+                lastExportError = error
             }
         }
     }
     
-    func requestHKAuth() async throws {
-        return try await withCheckedThrowingContinuation { cont in
-            healthStore.requestAuthorization(toShare: [], read: [stepType]) { success, error in
-                if let error = error {
-                    print("Authorization denied: \(String(describing: error))")
-                    cont.resume(throwing: error)
-                } else if success {
-                    cont.resume()
-                } else {
-                    cont.resume(throwing: NSError(domain: "HKAuth", code: 0))
-                }
-            }
-        }
-    }
     
-    func fetchSteps(startDate: Date, endDate: Date) async throws -> [HKQuantitySample] {
-        return try await withCheckedThrowingContinuation { cont in
-            let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
-            let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
-            
-            let query = HKSampleQuery(sampleType: stepType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sortDescriptor]) { _, samples, error in
-                guard let samples = samples as? [HKQuantitySample], error == nil else {
-                    print("Error fetching steps: \(String(describing: error))")
-                    cont.resume(throwing: error!)
-                    return
-                }
-                cont.resume(returning: samples)
-            }
-            healthStore.execute(query)
-        }
-    }
-    
-    func aggregateSteps(samples: [HKQuantitySample]) -> [(Date, Double)] {
-        var dailySteps: [Date: Double] = [:]
-        let calendar = Calendar.current
-        
-        print(samples)
-        
-        for sample in samples {
-            let day = calendar.startOfDay(for: sample.startDate)
-            let count = sample.quantity.doubleValue(for: HKUnit.count())
-            dailySteps[day, default: 0] += count
-        }
-        
-        return dailySteps.sorted { $0.key < $1.key }
-    }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
